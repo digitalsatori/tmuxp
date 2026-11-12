@@ -1,204 +1,80 @@
-import inspect
-import os
+"""Sphinx documentation configuration for tmuxp."""
+
+from __future__ import annotations
+
+import pathlib
 import sys
-from os.path import dirname, relpath
-
-import alagitpull
-
-import tmuxp
 
 # Get the project root dir, which is the parent dir of this
-cwd = os.getcwd()
-project_root = os.path.dirname(cwd)
+cwd = pathlib.Path(__file__).parent
+project_root = cwd.parent
+src_root = project_root / "src"
 
-sys.path.insert(0, project_root)
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "_ext")))
+sys.path.insert(0, str(src_root))
+sys.path.insert(0, str(cwd / "_ext"))  # for local aafig extension
 
 # package data
-about = {}
-with open("../tmuxp/__about__.py") as fp:
+about: dict[str, str] = {}
+with (src_root / "tmuxp" / "__about__.py").open() as fp:
     exec(fp.read(), about)
 
+from gp_sphinx.config import make_linkcode_resolve, merge_sphinx_config  # noqa: E402
+from gp_sphinx.defaults import DEFAULT_SPHINX_FONT_PRELOAD  # noqa: E402
 
-extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.intersphinx',
-    'sphinx_autodoc_typehints',
-    'sphinx.ext.todo',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.linkcode',
-    'aafig',
-    'alagitpull',
-    'sphinx_issues',
-    'myst_parser',
-]
+import tmuxp  # noqa: E402
 
-myst_enable_extensions = ["colon_fence"]
-
-issues_github_path = about['__github__'].replace('https://github.com/', '')
-
-templates_path = ['_templates']
-
-source_suffix = {'.rst': 'restructuredtext', '.md': 'markdown'}
-
-master_doc = 'index'
-
-project = about['__title__']
-copyright = about['__copyright__']
-
-version = '%s' % ('.'.join(about['__version__'].split('.'))[:2])
-release = '%s' % (about['__version__'])
-
-exclude_patterns = ['_build']
-
-pygments_style = 'sphinx'
-
-html_theme_path = [alagitpull.get_path()]
-html_theme = 'alagitpull'
-html_extra_path = ['manifest.json']
-html_static_path = ['_static']
-html_sidebars = {
-    '**': [
-        'about.html',
-        'navigation.html',
-        'relations.html',
-        'more.html',
-        'book.html',
-        'searchbox.html',
-    ]
-}
-
-html_theme_options = {
-    'logo': 'img/tmuxp.svg',
-    'github_user': 'tmux-python',
-    'github_repo': 'tmuxp',
-    'github_type': 'star',
-    'github_banner': True,
-    'projects': alagitpull.projects,
-    'project_name': about['__title__'],
-    'project_title': about['__title__'],
-    'project_description': about['__description__'],
-    'project_url': about['__docs__'],
-    'show_meta_manifest_tag': True,
-    'show_meta_og_tags': True,
-    'show_meta_app_icon_tags': True,
-}
-
-alagitpull_internal_hosts = ['tmuxp.git-pull.com', '0.0.0.0']
-alagitpull_external_hosts_new_window = True
-
-htmlhelp_basename = '%sdoc' % about['__title__']
-
-latex_documents = [
-    (
-        'index',
-        '{0}.tex'.format(about['__package_name__']),
-        '{0} Documentation'.format(about['__title__']),
-        about['__author__'],
-        'manual',
-    )
-]
-
-man_pages = [
-    (
-        'index',
-        about['__package_name__'],
-        '{0} Documentation'.format(about['__title__']),
-        about['__author__'],
-        1,
-    )
-]
-
-texinfo_documents = [
-    (
-        'index',
-        '{0}'.format(about['__package_name__']),
-        '{0} Documentation'.format(about['__title__']),
-        about['__author__'],
-        about['__package_name__'],
-        about['__description__'],
-        'Miscellaneous',
-    )
-]
-
-intersphinx_mapping = {
-    'python': ('https://docs.python.org/', None),
-    'libtmux': ('https://libtmux.git-pull.com/', None),
-    'click': ('http://click.pocoo.org/5', None),
-}
-
-# aafig format, try to get working with pdf
-aafig_format = dict(latex='pdf', html='gif')
-
-aafig_default_options = dict(scale=0.75, aspect=0.5, proportional=True)
-
-
-def linkcode_resolve(domain, info):  # NOQA: C901
-    """
-    Determine the URL corresponding to Python object
-
-    Notes
-    -----
-    From https://github.com/numpy/numpy/blob/v1.15.1/doc/source/conf.py, 7c49cfa
-    on Jul 31. License BSD-3. https://github.com/numpy/numpy/blob/v1.15.1/LICENSE.txt
-    """
-    if domain != 'py':
-        return None
-
-    modname = info['module']
-    fullname = info['fullname']
-
-    submod = sys.modules.get(modname)
-    if submod is None:
-        return None
-
-    obj = submod
-    for part in fullname.split('.'):
-        try:
-            obj = getattr(obj, part)
-        except Exception:
-            return None
-
-    # strip decorators, which would resolve to the source of the decorator
-    # possibly an upstream bug in getsourcefile, bpo-1764286
-    try:
-        unwrap = inspect.unwrap
-    except AttributeError:
-        pass
-    else:
-        obj = unwrap(obj)
-
-    try:
-        fn = inspect.getsourcefile(obj)
-    except Exception:
-        fn = None
-    if not fn:
-        return None
-
-    try:
-        source, lineno = inspect.getsourcelines(obj)
-    except Exception:
-        lineno = None
-
-    if lineno:
-        linespec = "#L%d-L%d" % (lineno, lineno + len(source) - 1)
-    else:
-        linespec = ""
-
-    fn = relpath(fn, start=dirname(tmuxp.__file__))
-
-    if 'dev' in about['__version__']:
-        return "%s/blob/master/%s/%s%s" % (
-            about['__github__'],
-            about['__package_name__'],
-            fn,
-            linespec,
-        )
-    else:
-        return "%s/blob/v%s/%s/%s%s" % (
-            about['__github__'],
-            about['__version__'],
-            about['__package_name__'],
-            fn,
-            linespec,
-        )
+conf = merge_sphinx_config(
+    project=about["__title__"],
+    version=about["__version__"],
+    copyright=about["__copyright__"],
+    source_repository=f"{about['__github__']}/",
+    docs_url=about["__docs__"],
+    source_branch="master",
+    light_logo="img/tmuxp.svg",
+    dark_logo="img/tmuxp.svg",
+    extra_extensions=[
+        "sphinx_autodoc_api_style",
+        "aafig",
+        "sphinx_gp_mermaid",
+        "sphinx_gp_highlighting",
+        "tmux_layout",
+        "sphinx_autodoc_argparse.exemplar",
+    ],
+    gp_highlighting_inline_literals="safe",
+    gp_highlighting_inline_commands=["tmuxp"],
+    # Route a plain ```mermaid fence to the mermaid directive (the colon and
+    # brace forms route there already via colon_fence). Redundant once the
+    # pinned gp-sphinx release auto-routes when sphinx_gp_mermaid is active;
+    # drop this on the next gp-sphinx bump.
+    myst_fence_as_directive=["mermaid"],
+    intersphinx_mapping={
+        "python": ("https://docs.python.org/", None),
+        "libtmux": ("https://libtmux.git-pull.com/", None),
+    },
+    linkcode_resolve=make_linkcode_resolve(tmuxp, about["__github__"]),
+    # tmuxp-specific overrides
+    theme_options={"mask_icon": "/_static/img/tmuxp.svg"},
+    html_extra_path=["manifest.json"],
+    html_favicon="_static/favicon.ico",
+    html_css_files=["css/site-bars.css"],
+    html_js_files=[("js/site-bars.js", {"defer": "defer"})],
+    # The top bar sets its wordmark in IBM Plex Mono 600.
+    sphinx_font_preload=[
+        *DEFAULT_SPHINX_FONT_PRELOAD,
+        ("IBM Plex Mono", 600, "normal"),
+    ],
+    aafig_format={"latex": "pdf", "html": "gif"},
+    aafig_default_options={"scale": 0.75, "aspect": 0.5, "proportional": True},
+    rediraffe_redirects="redirects.txt",
+    # Keep Sphinx out of non-document trees under docs/: the mermaid toolchain
+    # (node_modules) and its render cache, plus agent guidance (AGENTS.md and
+    # its CLAUDE.md symlink) which would otherwise be orphan documents.
+    exclude_patterns=[
+        "_build",
+        "node_modules",
+        "_mermaid_cache",
+        "AGENTS.md",
+        "CLAUDE.md",
+    ],
+)
+globals().update(conf)

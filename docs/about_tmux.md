@@ -5,6 +5,7 @@
 :::{figure} /\_static/tao-tmux-screenshot.png
 :scale: 60%
 :align: center
+:loading: lazy
 
 ISC-licensed terminal multiplexer.
 
@@ -37,25 +38,25 @@ inside the text dimension. Inside tmux you can:
 | ----------- | ------------------------------- | ------------------------------------- |
 | Multiplexer | Multi-tasking                   | Multiple applications simultaneously. |
 | Session     | Desktop                         | Applications are visible here         |
-| Window      | Virtual Desktop or applications | A desktop that stores it own screen   |
+| Window      | Virtual Desktop or applications | A desktop that stores its own screen  |
 | Pane        | Application                     | Performs operations                   |
 
-:::{aafig}
-+----------------------------------------------------------------+
-| +--------+--------+ +-----------------+ +-----------------+ |
-| | pane | pane | | pane | | pane | |
-| | | | | | | | |
-| | | | | | | | |
-| +--------+--------+ | | +-----------------+ |
-| | pane | pane | | | | pane | |
-| | | | | | | | |
-| | | | | | | | |
-| +--------+--------+ +-----------------+ +-----------------+ |
-| | window | | window | | window | |
-| \--------+--------/ \-----------------/ \-----------------/ |
-+----------------------------------------------------------------+
-| session |
-\----------------------------------------------------------------/
+:::{mermaid}
+:caption: A session holds windows; each window holds one or more panes.
+:alt: tmux session containing windows and panes
+:name: tmux-session-window-pane-tree
+:responsive: fit
+
+flowchart TD
+    session["session"] --> w1["window"]
+    session --> w2["window"]
+    session --> w3["window"]
+    w1 --> p1["pane"]
+    w1 --> p2["pane"]
+    w1 --> p3["pane"]
+    w1 --> p4["pane"]
+    w3 --> p5["pane"]
+    w3 --> p6["pane"]
 :::
 
 - 1 {term}`Server`.
@@ -80,58 +81,38 @@ splitting up 1 terminal into multiple.
 One screen can be used to edit a file, and another may be used to
 `$ tail -F` a logfile.
 
-:::{aafig}
-+--------+--------+
-| $ bash | $ bash |
-| | |
-| | |
-| | |
-| | |
-| | |
-| | |
-+--------+--------+
+:::{tmux-layout}
+:size: 40x10
+:layout: even-horizontal
+
+bash
+---
+bash
 :::
 
-:::{aafig}
-+--------+--------+
-| $ bash | $ bash |
-| | |
-| | |
-+--------+--------+
-| $ vim | $ bash |
-| | |
-| | |
-+--------+--------+
+:::{tmux-layout}
+:size: 40x12
+:layout: tiled
+
+bash
+---
+bash
+---
+vim
+---
+bash
 :::
 
-tmux supports as manys terminals as you want.
+tmux supports as many terminals as you want.
 
-:::{aafig}
-+---------+---------+
-| $ bash | $ bash |
-| | |
-| | | /-----------------\
-+---------+---------+ --> |'switch-window 2'|
-| $ bash | $ bash | \-----------------/
-| | | |
-| | | |
-+---------+---------+ |
-| '1:sys* 2:vim' | |
-+-------------------+ |
-/------------------------/
-|
-v
-+---------+---------+
-| $ vim |
-| |
-| |
-+-------------------+
-| $ bash | $ bash |
-| | |
-| | |
-+-------------------+
-| '1:sys 2:vim*' |
-+-------------------+
+:::{mermaid}
+:caption: Switch between the windows in a session.
+:alt: switching from one active tmux window to another
+:name: tmux-window-switching
+:responsive: fit
+
+flowchart TD
+    w1["window 1 · sys (active)"] -->|"switch-window 2"| w2["window 2 · vim (active)"]
 :::
 
 You can switch between the windows you create.
@@ -141,53 +122,15 @@ You can switch between the windows you create.
 You can leave tmux and all applications running (detach), log out, make
 a sandwich, and re-(attach), all applications are still running!
 
-:::{aafig}
-+--------+--------+
-| $ bash | $ bash |
-| | |
-| | | /------------\
-+--------+--------+ --> | detach |
-| $ vim | $ bash | | 'Ctrl-b b' |
-| | | \------------/
-| | | |
-+--------+--------+ |
-/------------------/
-|
-v
-+-----------------------+
-| $ [screen detached] |
-| |
-| |
-| |
-| |
-| |
-| |
-+-----------------------+
-v
-|
-v
-+-----------------------+
-| $ [screen detached] |
-| $ tmux attach |
-| | /------------\
-| | --> | attaching |
-| | \------------/
-| | |
-| | |
-+-----------------------+ |
-|
-/---------------------------/
-|
-v
-+--------+--------+
-| $ bash | $ bash |
-| | |
-| | |
-+--------+--------+
-| $ vim | $ bash |
-| | |
-| | |
-+--------+--------+
+:::{mermaid}
+:caption: Detach, leave everything running, and reattach later.
+:alt: detaching from and reattaching to a running tmux session
+:name: tmux-detach-reattach-cycle
+:responsive: fit
+
+flowchart TD
+    running["session running"] -->|"detach · Prefix d"| detached["screen detached — apps keep running"]
+    detached -->|"tmux attach"| running
 :::
 
 ### Manage workflow
@@ -196,7 +139,7 @@ v
 - Programmers like to have an editor open with a CLI nearby.
 
 Applications running on a remote server can be launched inside of a tmux
-session, detached, and reattached next timeyour ["train of
+session, detached, and reattached next time your ["train of
 thought"](http://en.wikipedia.org/wiki/Train_of_thought) and work.
 
 Multitasking. Preserving the thinking you have.
@@ -209,11 +152,10 @@ For the freshest results on how to get tmux installed on your system,
 "How to install tmux on \<my distro>" will do, as directions change and
 are slightly different between distributions.
 
-This documentation is written for version **1.8**. It's important that
-you have the latest stable release of tmux. The latest stable version is
-viewable on the [tmux homepage](http://tmux.sourceforge.net/).
+tmuxp requires tmux **3.2 or newer**. The latest stable version is
+viewable on the [tmux homepage](https://github.com/tmux/tmux).
 
-**Mac OS X** users may install that latest stable version of tmux
+**Mac OS X** users may install the latest stable version of tmux
 through [MacPorts](http://www.macports.org/),
 [fink](http://fink.thetis.ig42.org/) or [Homebrew](http://www.brew.sh)
 (aka brew).
@@ -226,7 +168,7 @@ If **compiling from source**, the dependencies are
 
 ### Start a new session
 
-```bash
+```console
 $ tmux
 ```
 
@@ -241,10 +183,10 @@ This can generate the error "failed to connect to server".
 
 This could be because:
 
-- tmux server has killed its' last session, killing the server.
+- tmux server has killed its last session, killing the server.
 - tmux server has encountered a crash. (tmux is highly stable,
   this will rarely happen)
-- tmux has not be launched yet at all.
+- tmux has not been launched yet at all.
 
 :::
 
@@ -257,7 +199,7 @@ carefully**, then try it yourself.
 
 First, you press the _prefix_ key. This is `C-b` by default.
 
-Release. Then pause. For less than second. Then type what's next.
+Release. Then pause. For less than a second. Then type what's next.
 
 `C-b o` means: Press `Ctrl` and `b` at the same time. Release, Then
 press `o`.
@@ -268,7 +210,7 @@ press `o`.
 
 Sessions can be _named upon creation_.
 
-```bash
+```console
 $ tmux new-session [-s session-name]
 ```
 
@@ -288,7 +230,7 @@ Short cut       ``Prefix`` + ``$``
 
 Windows can be _named upon creation_.
 
-```bash
+```console
 $ tmux new-window [-n window-name]
 ```
 
@@ -322,25 +264,25 @@ Short cut       ``Prefix`` + ``c``
 
 By number
 
-```bash
+```console
 $ tmux select-window
 ```
 
 Next
 
-```bash
+```console
 $ tmux next-window
 ```
 
 Previous
 
-```bash
+```console
 $ tmux previous-window
 ```
 
 Last-window
 
-```bash
+```console
 $ tmux last-window
 ```
 
@@ -357,13 +299,13 @@ $ tmux last-window
 
 Move window
 
-```bash
+```console
 $ tmux move-window [-t dst-window]
 ```
 
 Swap the window
 
-```bash
+```console
 $ tmux swap-window [-t dst-window]
 ```
 
@@ -373,7 +315,7 @@ $ tmux swap-window [-t dst-window]
 
 ### Move panes
 
-```bash
+```console
 $ tmux move-pane [-t dst-pane]
 ```
 
@@ -387,11 +329,11 @@ $ tmux move-pane [-t dst-pane]
 
 Shortcut to move between panes.
 
-```bash
+```console
 $ tmux last-window
 ```
 
-```bash
+```console
 $ tmux next-window
 ```
 
@@ -410,7 +352,7 @@ Recipe: tmux conf to `hjkl` commands, add this to your `~/.tmux.conf`:
 
 ### Kill window
 
-```bash
+```console
 $ tmux kill-window [-t target-window]
 ```
 
@@ -420,7 +362,7 @@ $ tmux kill-window [-t target-window]
 
 ### Kill pane
 
-```bash
+```console
 $ tmux kill-pane [-t target-pane]
 ```
 
@@ -430,7 +372,7 @@ $ tmux kill-pane [-t target-pane]
 
 ### Splitting windows into panes
 
-```bash
+```console
 $ tmux split-window [-c start-directory] <shell-command>
 ```
 
@@ -443,13 +385,13 @@ Tmux windows can be split into multiple panes.
 
 ## Configuring tmux
 
-Tmux can be configured via a configuration at `~/.tmux.conf`.
+Tmux can be configured via a `tmux(1)` configuration at `~/.tmux.conf`.
 
 Depending on your tmux version, there is different options available.
 
 ### Vi-style copy and paste
 
-```sh
+```console
 # Vi copypaste mode
 set-window-option -g mode-keys vi
 bind-key -t vi-copy 'v' begin-selection
@@ -458,7 +400,7 @@ bind-key -t vi-copy 'y' copy-selection
 
 ### Aggressive resizing for clients
 
-```sh
+```console
 setw -g aggressive-resize on
 ```
 
@@ -466,7 +408,7 @@ setw -g aggressive-resize on
 
 `<Prefix>` + `r`.
 
-```sh
+```console
 bind r source-file ~/.tmux.conf \; display-message "Config reloaded."
 ```
 
@@ -479,7 +421,7 @@ You can use [tmux-mem-cpu-load][tmux-mem-cpu-load] to get stats (requires compil
 [basic-cpu-and-memory.tmux][basic-cpu-and-memory.tmux]. You can pipe in a bash command to a tmux
 status line like:
 
-```sh
+```console
 $(shell-command)
 ```
 
@@ -505,7 +447,7 @@ line. The interval is determined by the `status-interval`:
 
 :::{tip}
 
-{ref}`Prefix key` is pressed before a short cut!
+{ref}`prefix-key` is pressed before a short cut!
 
 :::
 
@@ -560,11 +502,11 @@ line. The interval is determined by the `status-interval`:
 | `C-Up, C-Down` `C-Left, C-Right` | Resize the current pane in steps of one cell.                                                                              |
 | `M-Up, M-Down` `M-Left, M-Right` | Resize the current pane in steps of five cells.                                                                            |
 
-Source: tmux manpage[1].
+Source: tmux manpage[^id2].
 
 To get the text documentation of a `.1` manual file:
 
-```bash
+```console
 $ nroff -mdoc tmux.1|less
 ```
 

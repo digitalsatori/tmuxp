@@ -1,0 +1,245 @@
+"""Exceptions for tmuxp."""
+
+from __future__ import annotations
+
+import logging
+
+from libtmux._internal.query_list import ObjectDoesNotExist
+
+from ._compat import implements_to_string
+
+logger = logging.getLogger(__name__)
+
+
+class TmuxpException(Exception):
+    """Base Exception for Tmuxp Errors."""
+
+
+class WorkspaceError(TmuxpException):
+    """Error parsing tmuxp workspace data."""
+
+
+class SessionNotFound(TmuxpException):
+    """tmux session not found."""
+
+    def __init__(
+        self,
+        session_target: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = "Session not found"
+        if session_target is not None:
+            msg += f": {session_target}"
+        super().__init__(msg, *args, **kwargs)
+
+
+class WindowNotFound(TmuxpException):
+    """tmux window not found."""
+
+    def __init__(
+        self,
+        window_target: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = "Window not found"
+        if window_target is not None:
+            msg += f": {window_target}"
+        super().__init__(msg, *args, **kwargs)
+
+
+class PaneNotFound(TmuxpException):
+    """tmux pane not found."""
+
+    def __init__(
+        self,
+        pane_target: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = "Pane not found"
+        if pane_target is not None:
+            msg += f": {pane_target}"
+        super().__init__(msg, *args, **kwargs)
+
+
+class EmptyWorkspaceException(WorkspaceError):
+    """Workspace file is empty."""
+
+    def __init__(
+        self,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        super().__init__("Session configuration is empty.", *args, **kwargs)
+
+
+class SessionMissingWorkspaceException(WorkspaceError, ObjectDoesNotExist):
+    """Session missing while loading tmuxp workspace."""
+
+    def __init__(self, *args: object) -> None:
+        super().__init__(
+            "No session object exists for WorkspaceBuilder. "
+            "Tip: Add session_name in constructor or run WorkspaceBuilder.build()",
+            *args,
+        )
+
+
+class ActiveSessionMissingWorkspaceException(WorkspaceError):
+    """Active session cannot be found while loading tmuxp workspace."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__("No session active.", *args, **kwargs)
+
+
+class WorkspaceBuilderError(WorkspaceError):
+    """Base error for resolving and validating a workspace builder."""
+
+
+class WorkspaceBuilderNotFound(WorkspaceBuilderError):
+    """Configured ``workspace_builder`` could not be resolved.
+
+    >>> print(WorkspaceBuilderNotFound("nope"))
+    Workspace builder 'nope' could not be found....
+    """
+
+    def __init__(
+        self,
+        target: str,
+        available: list[str] | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = f"Workspace builder {target!r} could not be found."
+        if available:
+            names = ", ".join(sorted(available))
+            msg += f" Available entry point builders: {names}."
+        else:
+            msg += (
+                " Provide a Python dotted path (e.g. 'package.module:Builder') "
+                "or register an entry point in the 'tmuxp.workspace_builders' group."
+            )
+        super().__init__(msg, *args, **kwargs)
+
+
+class WorkspaceBuilderImportError(WorkspaceBuilderError):
+    """Configured ``workspace_builder`` failed to import.
+
+    >>> print(WorkspaceBuilderImportError("pkg:B"))
+    Could not import workspace builder 'pkg:B'....
+    """
+
+    def __init__(
+        self,
+        target: str,
+        reason: str | None = None,
+        paths: list[str] | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = f"Could not import workspace builder {target!r}."
+        if reason:
+            msg += f" {reason}"
+        if paths:
+            msg += f" Searched trusted paths: {', '.join(paths)}."
+        msg += (
+            " Confirm the builder is importable, or add its directory to "
+            "'workspace_builder_paths'."
+        )
+        super().__init__(msg, *args, **kwargs)
+
+
+class InvalidWorkspaceBuilder(WorkspaceBuilderError):
+    """Resolved ``workspace_builder`` object is not a usable builder.
+
+    >>> print(InvalidWorkspaceBuilder("pkg:B"))
+    'pkg:B' is not a valid workspace builder.
+    """
+
+    def __init__(
+        self,
+        target: str,
+        reason: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = f"{target!r} is not a valid workspace builder"
+        msg += f": {reason}" if reason else "."
+        super().__init__(msg, *args, **kwargs)
+
+
+class WorkspaceBuilderPathError(WorkspaceBuilderError):
+    """A ``workspace_builder_paths`` entry is not a usable directory.
+
+    >>> print(WorkspaceBuilderPathError("/x"))
+    workspace_builder_paths entry is invalid: /x....
+    """
+
+    def __init__(
+        self,
+        path: str,
+        reason: str | None = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        msg = f"workspace_builder_paths entry is invalid: {path}."
+        msg += f" {reason}" if reason else " Each entry must be an existing directory."
+        super().__init__(msg, *args, **kwargs)
+
+
+class InvalidWorkspaceBuilderOption(WorkspaceBuilderError):
+    """A ``workspace_builder_options`` value is invalid.
+
+    >>> print(InvalidWorkspaceBuilderOption("bad"))
+    Invalid workspace_builder_options: bad
+    """
+
+    def __init__(self, reason: str, *args: object, **kwargs: object) -> None:
+        super().__init__(
+            f"Invalid workspace_builder_options: {reason}",
+            *args,
+            **kwargs,
+        )
+
+
+class TmuxpPluginException(TmuxpException):
+    """Base Exception for Tmuxp Errors."""
+
+
+class BeforeLoadScriptNotExists(OSError):
+    """Raises if shell script could not be found."""
+
+    def __init__(self, *args: object, **kwargs: object) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.strerror = f"before_script file '{self.strerror}' doesn't exist."
+
+
+@implements_to_string
+class BeforeLoadScriptError(Exception):
+    """Shell script execution error.
+
+    Replaces :class:`subprocess.CalledProcessError` for
+    :func:`tmuxp.util.run_before_script`.
+    """
+
+    def __init__(
+        self,
+        returncode: int,
+        cmd: str,
+        output: str | None = None,
+    ) -> None:
+        self.returncode = returncode
+        self.cmd = cmd
+        self.output = output
+        self.message = (
+            f"before_script failed with returncode {self.returncode}.\n"
+            f"command: {self.cmd}\n"
+            "Error output:\n"
+            f"{self.output}"
+        )
+
+    def __str__(self) -> str:
+        """Return shell error message."""
+        return self.message

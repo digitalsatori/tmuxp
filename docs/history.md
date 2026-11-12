@@ -1,8 +1,6 @@
+(changelog)=
+
 (history)=
-
-```{module} tmuxp
-
-```
 
 ```{include} ../CHANGES
 

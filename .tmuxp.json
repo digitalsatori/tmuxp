@@ -1,9 +1,8 @@
 {
   "session_name": "tmuxp",
   "start_directory": "./",
-  "before_script": "./.tmuxp-before-script.sh",
   "shell_command_before": [
-    "[ -f .venv/bin/activate ] && source .venv/bin/activate && reset"
+    "uv virtualenv --quiet > /dev/null 2>&1 && clear"
   ],
   "windows": [
     {
@@ -11,21 +10,22 @@
       "focus": true,
       "layout": "main-horizontal",
       "options": {
-        "main-pane-height": 35
+        "main-pane-height": "67%"
       },
       "panes": [
         {
           "focus": true
         },
         "pane",
-        "make watch_test"
+        "just watch-mypy",
+        "just watch-test"
       ]
     },
     {
       "window_name": "docs",
       "layout": "main-horizontal",
       "options": {
-        "main-pane-height": 35
+        "main-pane-height": "67%"
       },
       "start_directory": "docs/",
       "panes": [
@@ -33,8 +33,8 @@
           "focus": true
         },
         "pane",
-        "make serve",
-        "make SPHINXBUILD='poetry run sphinx-build' watch"
+        "pane",
+        "just start"
       ]
     }
   ]

@@ -1,0 +1,136 @@
+name: docs
+
+on:
+  push:
+    branches:
+      - master
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    environment: docs
+    strategy:
+      matrix:
+        python-version: ['3.14']
+    steps:
+      - uses: actions/checkout@v7
+      - name: Filter changed file paths to outputs
+        uses: dorny/paths-filter@v4
+        id: changes
+        with:
+          filters: |
+            root_docs:
+              - CHANGES
+              - README.*
+            docs:
+              - 'docs/**'
+              - 'examples/**'
+            python_files:
+              - 'src/tmuxp/**'
+              - pyproject.toml
+              - uv.lock
+
+      - name: Should publish
+        if: steps.changes.outputs.docs == 'true' || steps.changes.outputs.root_docs == 'true' || steps.changes.outputs.python_files == 'true'
+        run: echo "PUBLISH=$(echo true)" >> $GITHUB_ENV
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.2.0
+        if: env.PUBLISH == 'true'
+        with:
+          enable-cache: true
+
+      - name: Set up Python ${{ matrix.python-version }}
+        if: env.PUBLISH == 'true'
+        run: uv python install ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        if: env.PUBLISH == 'true'
+        run: uv sync --all-extras --dev
+
+      - name: Install just
+        if: env.PUBLISH == 'true'
+        uses: extractions/setup-just@v4
+
+      - name: Set up Node.js
+        if: env.PUBLISH == 'true'
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      - name: Set up pnpm
+        if: env.PUBLISH == 'true'
+        uses: pnpm/action-setup@v6
+        with:
+          version: 10
+          run_install: false
+
+      - name: Cache Puppeteer browser
+        if: env.PUBLISH == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/puppeteer
+          key: puppeteer-${{ runner.os }}-${{ hashFiles('docs/pnpm-lock.yaml') }}
+          restore-keys: |
+            puppeteer-${{ runner.os }}-
+
+      # Diagrams (sphinx-gp-mermaid) are rendered at build time by
+      # mmdc, which drives a headless Chrome. Without it the build still
+      # succeeds but degrades diagrams to a text fallback, so provision both.
+      - name: Install diagram toolchain (mermaid-cli + Chrome)
+        if: env.PUBLISH == 'true'
+        run: |
+          pnpm -C docs install --frozen-lockfile
+          pnpm -C docs rebuild puppeteer
+          pnpm -C docs exec mmdc --version
+
+      - name: Print python versions
+        if: env.PUBLISH == 'true'
+        run: |
+          python -V
+          uv run python -V
+
+      - name: Cache sphinx fonts
+        if: env.PUBLISH == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/sphinx-fonts
+          key: sphinx-fonts-${{ hashFiles('docs/conf.py') }}
+          restore-keys: |
+            sphinx-fonts-
+
+      - name: Build documentation
+        if: env.PUBLISH == 'true'
+        run: |
+          cd docs && just html
+
+      - name: Configure AWS Credentials
+        if: env.PUBLISH == 'true'
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.TMUXP_DOCS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Push documentation to S3
+        if: env.PUBLISH == 'true'
+        run: |
+          aws s3 sync docs/_build/html "s3://${{ secrets.TMUXP_DOCS_BUCKET }}" \
+            --delete --follow-symlinks
+
+      - name: Invalidate CloudFront
+        if: env.PUBLISH == 'true'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ secrets.TMUXP_DOCS_DISTRIBUTION }}" \
+            --paths "/index.html" "/history.html" "/objects.inv" "/searchindex.js"
+
+      - name: Purge cache on Cloudflare
+        if: env.PUBLISH == 'true'
+        uses: jakejarvis/cloudflare-purge-action@v0.3.0
+        env:
+          CLOUDFLARE_TOKEN: ${{ secrets.CLOUDFLARE_TOKEN }}
+          CLOUDFLARE_ZONE: ${{ secrets.CLOUDFLARE_ZONE }}

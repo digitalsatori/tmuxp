@@ -2,125 +2,187 @@
 
 # Quickstart
 
+tmuxp launches a whole tmux workspace — its windows, panes, and the commands
+inside them — from a single YAML or JSON file. Install it, write one file, and
+{ref}`tmuxp load <cli-load>` builds the session and drops you into it. This page
+takes you from nothing to a running session.
+
 ## Installation
 
-Assure you have at least tmux **>= 1.8** and python **>= 2.6**.
+Ensure you have at least tmux **>= 3.2** and python **>= 3.11**.
 
-```{code-block} bash
-
-$ pip install tmuxp
-
+```console
+$ pip install --user tmuxp
 ```
 
-You can upgrade to the latest release with:
+If you manage dependencies with [uv] inside a project environment, add tmuxp to
+your lockfile instead:
 
-```{code-block} bash
+```console
+$ uv add tmuxp
+```
 
-$ pip install tmuxp -U
+To run tmuxp without installing it globally — the way you'd use [pipx] — invoke
+it through [uvx]:
 
+```console
+$ uvx tmuxp
+```
+
+Upgrade to the latest release with:
+
+```console
+$ pip install --user --upgrade tmuxp
+```
+
+Within a uv-managed project, upgrade by refreshing the lockfile and syncing:
+
+```console
+$ uv lock --upgrade-package tmuxp
+```
+
+```console
+$ uv sync
 ```
 
 Then install {ref}`completion`.
 
-If you are a Homebrew user you can install it with:
+Homebrew users can install it with:
 
-```{code-block} bash
-
+```console
 $ brew install tmuxp
-
 ```
 
-## CLI
+(developmental-releases)=
+
+### Developmental releases
+
+New versions of tmuxp are published to [PyPI] as alpha, beta, or release
+candidates. Their version carries an `a1`, `b1`, or `rc1` suffix — `1.10.0b4` is
+the fourth beta of `1.10.0`, before general availability.
+
+Install the latest pre-release with the tool you use:
+
+```console
+$ pip install --user --upgrade --pre tmuxp
+```
+
+```console
+$ uv add tmuxp --prerelease allow
+```
+
+```console
+$ uvx --from 'tmuxp' --prerelease allow tmuxp
+```
+
+```console
+$ pipx install --suffix=@next 'tmuxp' --pip-args '\--pre' --force
+```
+
+After the pipx install, load with `tmuxp@next load [session]`.
+
+Or track trunk directly (it can break):
+
+```console
+$ pip install --user -e git+https://github.com/tmux-python/tmuxp.git#egg=tmuxp
+```
+
+```console
+$ uv add "tmuxp @ git+https://github.com/tmux-python/tmuxp.git@master"
+```
+
+```console
+$ uvx --from "tmuxp @ git+https://github.com/tmux-python/tmuxp.git@master" tmuxp
+```
+
+```console
+$ pipx install --suffix=@master 'tmuxp @ git+https://github.com/tmux-python/tmuxp.git@master' --force
+```
+
+[pip]: https://pip.pypa.io/en/stable/
+[pipx]: https://pypa.github.io/pipx/docs/
+[PyPI]: https://pypi.org/project/tmuxp/
+[uv]: https://docs.astral.sh/uv/getting-started/features/#python-versions
+[uvx]: https://docs.astral.sh/uv/guides/tools/
+
+## Commands
 
 :::{seealso}
 
-{ref}`examples`, {ref}`cli`, {ref}`completion`.
+{ref}`examples`, {ref}`commands`, {ref}`completion`.
 
 :::
 
 tmuxp launches workspaces / sessions from JSON and YAML files.
 
-Configuration files can be stored in `$HOME/.tmuxp` or in project
-directories as `.tmuxp.py`, `.tmuxp.json` or `.tmuxp.yaml`.
+Workspace files live in `$HOME/.tmuxp`, or in a project directory as
+`.tmuxp.yaml`, `.tmuxp.yml`, or `.tmuxp.json`. Every workspace file needs:
 
-Every configuration is required to have:
-
-1. `session_name`
-2. list of `windows`
-3. list of `panes` for every window in `windows`
+1. a `session_name`
+2. a list of `windows`
+3. a list of `panes` for every window
 
 Create a file, `~/.tmuxp/example.yaml`:
 
 ```{literalinclude} ../examples/2-pane-vertical.yaml
 :language: yaml
-
 ```
 
-```{code-block} bash
-
+```console
 $ tmuxp load example.yaml
-
 ```
 
-This creates your tmuxp session.
+This builds and attaches your session.
 
-Load multiple tmux sessions at once:
+Load several at once:
 
-```{code-block} bash
-
+```console
 $ tmuxp load example.yaml anothersession.yaml
-
 ```
 
-tmuxp will offer to `switch-client` for you if you're already in a
-session. You can also load a configuration, and append the windows to
-the current active session.
+If you're already inside a session, tmuxp offers to `switch-client` for you, or
+to append the new windows to the session you're in.
 
-You can also have a custom tmuxp config directory by setting the
-`TMUX_CONFIGDIR` in your environment variables.
+You can point tmuxp at a different config directory with the `TMUXP_CONFIGDIR`
+environment variable:
 
-```{code-block} bash
-
+```console
 $ TMUXP_CONFIGDIR=$HOME/.tmuxpmoo tmuxp load cpython
-
 ```
 
-Or in your `~/.bashrc` / `~/.zshrc` you can set:
+Or set it in your `~/.bashrc` / `~/.zshrc`:
 
-```{code-block} bash
-
-export TMUXP_CONFIGDIR=$HOME/.yourconfigdir/tmuxp
-
+```console
+$ export TMUXP_CONFIGDIR=$HOME/.yourconfigdir/tmuxp
 ```
 
-You can also [Import][import] configs [teamocil][teamocil] and [tmuxinator][tmuxinator].
+You can also [import][import] configs from [teamocil] and [tmuxinator].
 
 ## Pythonics
 
 :::{seealso}
 
-{ref}`libtmux python API documentation <libtmux:api>` and {ref}`developing`,
-{ref}`internals`.
+{ref}`libtmux python API documentation <libtmux:api>` and {ref}`developing`.
 
 :::
 
-ORM - [Object Relational Mapper][object relational mapper]
+Under the hood, tmuxp drives tmux through
+[libtmux](https://libtmux.git-pull.com/) — an
+[object-relational mapper][object relational mapper] and
+[abstraction layer] over `tmux(1)`'s commands. Each config concept maps to a
+libtmux call:
 
-AL - [Abstraction Layer][abstraction layer]
-
-### python abstraction layer
-
-| {ref}`tmuxp python api <libtmux:api>` | {term}`tmux(1)` equivalent |
+| {ref}`libtmux Python API <libtmux:api>` | {term}`tmux(1)` equivalent |
 | ------------------------------------- | -------------------------- |
 | {meth}`libtmux.Server.new_session`    | `$ tmux new-session`       |
-| {meth}`libtmux.Server.list_sessions`  | `$ tmux list-sessions`     |
-| {meth}`libtmux.Session.list_windows`  | `$ tmux list-windows`      |
+| {attr}`libtmux.Server.sessions`       | `$ tmux list-sessions`     |
+| {attr}`libtmux.Session.windows`       | `$ tmux list-windows`      |
 | {meth}`libtmux.Session.new_window`    | `$ tmux new-window`        |
-| {meth}`libtmux.Window.list_panes`     | `$ tmux list-panes`        |
-| {meth}`libtmux.Window.split_window`   | `$ tmux split-window`      |
+| {attr}`libtmux.Window.panes`          | `$ tmux list-panes`        |
+| {meth}`libtmux.Window.split`          | `$ tmux split-window`      |
 | {meth}`libtmux.Pane.send_keys`        | `$ tmux send-keys`         |
 
-[import]: http://tmuxp.git-pull.com/cli.html#import
+[import]: http://tmuxp.git-pull.com/commands/#import
 [tmuxinator]: https://github.com/aziz/tmuxinator
 [teamocil]: https://github.com/remiprev/teamocil
 [abstraction layer]: http://en.wikipedia.org/wiki/Abstraction_layer

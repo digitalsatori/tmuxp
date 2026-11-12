@@ -2,65 +2,63 @@
 
 # Glossary
 
-```{eval-rst}
-.. glossary::
+```{glossary}
 
-    tmuxp
-        A tool to manage workspaces with tmux. A pythonic abstraction of
-        tmux.
+tmuxp
+    A tool to manage workspaces with tmux. A pythonic abstraction of
+    tmux.
 
-    tmux(1)
-        The tmux binary. Used internally to distinguish tmuxp is only a
-        layer on top of tmux.
+tmux
+tmux(1)
+    The tmux binary. Used internally to distinguish tmuxp is only a
+    layer on top of tmux.
 
-    kaptan
-        configuration management library, see `kaptan on github`_.
+ConfigReader
+    The {class}`~tmuxp._internal.config_reader.ConfigReader` configuration
+    management class, for parsing YAML / JSON / etc. files
+    to and from python data (dictionaries, in the future, potentially
+    dataclasses)
 
-    Server
-        Tmux runs in the background of your system as a process.
+Server
+    tmux runs in the background of your system as a process.
 
-        The server holds multiple :term:`Session`. By default, tmux
-        automatically starts the server the first time ``$ tmux`` is ran.
+    A server holds one or more {term}`Session`. tmux starts the server
+    automatically the first time ``$ tmux`` runs, if it isn't already
+    running.
 
-        A server contains :term:`session`'s.
+    Advanced: you can run more than one by specifying
+    ``[-L socket-name]`` or ``[-S socket-path]``.
 
-        tmux starts the server automatically if it's not running.
+Client
+    Attaches to a tmux {term}`server`.  When you use tmux through CLI,
+    you are using tmux as a client.
 
-        Advanced cases: multiple can be run by specifying
-        ``[-L socket-name]`` and ``[-S socket-path]``.
+Session
+    Inside a tmux {term}`server`.
 
-    Client
-        Attaches to a tmux :term:`server`.  When you use tmux through CLI,
-        you are using tmux as a client.
+    The session has 1 or more {term}`Window`. The bottom bar in tmux
+    show a list of windows. Normally they can be navigated with
+    ``Ctrl-a [0-9]``, ``Ctrl-a n`` and ``Ctrl-a p``.
 
-    Session
-        Inside a tmux :term:`server`.
+    Sessions can have a ``session_name``.
 
-        The session has 1 or more :term:`Window`. The bottom bar in tmux
-        show a list of windows. Normally they can be navigated with
-        ``Ctrl-a [0-9]``, ``Ctrl-a n`` and ``Ctrl-a p``.
+    Uniquely identified by ``session_id``.
 
-        Sessions can have a ``session_name``.
+Window
+    Entity of a {term}`session`.
 
-        Uniquely identified by ``session_id``.
+    Can have 1 or more {term}`pane`.
 
-    Window
-        Entity of a :term:`session`.
+    Panes can be organized with layouts.
 
-        Can have 1 or more :term:`pane`.
+    Windows can have names.
 
-        Panes can be organized with a layouts.
+Pane
+    Linked to a {term}`Window`.
 
-        Windows can have names.
+    a pseudoterminal.
 
-    Pane
-        Linked to a :term:`Window`.
-
-        a pseudoterminal.
-
-    Target
-        A target, cited in the manual as ``[-t target]`` can be a session,
-        window or pane.
+Target
+    A target, cited in the manual as ``[-t target]`` can be a session,
+    window or pane.
 ```
-
-[kaptan on github]: https://github.com/emre/kaptan
